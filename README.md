@@ -1,7 +1,7 @@
 # ConnectivityHelper
 Functions to help with checking your app's online status
 
-[![CircleCI](https://circleci.com/gh/flatcircle/ConnectivityHelper.svg?style=svg)](https://circleci.com/gh/flatcircle/ConnectivityHelper) [ ![Download](https://api.bintray.com/packages/flatcircle/ViewHelper/viewhelper/images/download.svg) ](https://bintray.com/flatcircle/ViewHelper/viewhelper/_latestVersion)
+[![CircleCI](https://circleci.com/gh/flatcircle/ConnectivityHelper.svg?style=svg)](https://circleci.com/gh/flatcircle/ConnectivityHelper) [ ![Download](https://api.bintray.com/packages/flatcircle/ConnectivityHelper/connectivityhelper/images/download.svg) ](https://bintray.com/flatcircle/ConnectivityHelper/connectivityhelper/_latestVersion)
 
 Installation
 --------

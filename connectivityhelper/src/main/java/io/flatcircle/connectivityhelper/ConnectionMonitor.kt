@@ -9,16 +9,33 @@ import java.lang.IllegalArgumentException
  * This class must be instantiated as a singleton and .clear()'d upon activity/application destruction
  */
 class ConnectionMonitor(context: Context,
+                        var stateChangeHandler: StateChangeHandler?,
                         vararg watchConnections: ConnectionType
-): ConnectivityEventObserver {
+): ConnectivityEventObserver, PingResultHandler {
+
+    companion object {
+        const val TIME_BETWEEN_PINGS = 30000L // 30 seconds
+    }
 
     private val watchedConnections: List<ConnectionType> = watchConnections.toList()
+
+    private val connectionMonitors: List<ConnectionStateMonitor> by lazy {
+        watchedConnections.map { ConnectionStateMonitor(it) }
+    }
+    private val pingLooper = PingLooper(connectionMonitors, this)
+
+    override fun result(didReachEndpoint: Boolean) {
+        if (didReachEndpoint) {
+            connectionState = ConnectionState.Online
+        }
+    }
 
     private val connectivityManager: ConnectivityManager =
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
     /**
-     * Returns true if this monitor is monitoring the given connectionType
+     * Returns naive connection status if this monitor is monitoring the given connectionType. Does
+     * not indicate whether the connectionType is on the internet, merely whether it is functioning
      */
     @Throws(IllegalArgumentException::class)
     fun isConnectedTo(connectionType: ConnectionType): Boolean {
@@ -33,28 +50,30 @@ class ConnectionMonitor(context: Context,
     }
 
     /**
-     * This indicates that the app is connected to some internet-enabled network,
-     * and therefore probably online. Since VPN configurations can be incorrect, or the user might
-     * be out of data on a cellular network, or blocked behind a firewall, this is not 100% reliable.
+     * Best guess as to the current connectionState. Only 100% accurate
+     * [ConnectionState.millisSinceLastCheck] milliseconds ago.
      */
-    var isProbablyOnline = false
-        private set
+    var connectionState: ConnectionState = ConnectionState.Offline
+        private set (nuState) {
 
-    private val connectionMonitors: List<ConnectionStateMonitor> by lazy {
-        val toReturn = mutableListOf<ConnectionStateMonitor>()
-        watchedConnections.forEach {
-            toReturn.add(ConnectionStateMonitor(it))
+            if (nuState is ConnectionState.ProbablyOnline &&
+                (field.millisSinceLastCheck() > TIME_BETWEEN_PINGS || field is ConnectionState.Offline)) {
+                    pingLooper.doPings()
+            } else if (nuState is ConnectionState.Offline) {
+                pingLooper.cancel()
+            }
+            field = nuState
+            stateChangeHandler?.stateChange(field)
         }
-        toReturn
-    }
 
     init {
         connectionMonitors.forEach { it.enable(connectivityManager, this) }
+        pingLooper.doPings()
     }
 
     override fun handleConnectivityEvent(connectivityEvent: ConnectivityEvent) {
 
-        isProbablyOnline = NetUtil.isProbablyOnline(connectivityManager)
+        connectionState = connectionState.newState(connectivityManager)
 
         watchedConnections.firstOrNull {
             it.networkCapablity == connectivityEvent.connectionType.networkCapablity
@@ -63,8 +82,53 @@ class ConnectionMonitor(context: Context,
     }
 
     fun clear() {
+        stateChangeHandler = null
+        pingLooper.cancel()
         connectionMonitors.forEach { it.disable(connectivityManager) }
         connectivityManager.isActiveNetworkMetered
     }
 
+}
+
+interface StateChangeHandler {
+
+    fun stateChange(state: ConnectionState)
+
+}
+
+sealed class ConnectionState(var lastCheckInMillis: Long){
+    object Offline: ConnectionState(System.currentTimeMillis())
+
+    /**
+     * This indicates that the app is connected to a default network, and therefore probably online.
+     * Since VPN configurations can be incorrect, or the user might be out of data on a cellular
+     * network, or blocked behind a firewall, this is not 100% reliable.
+     */
+    object ProbablyOnline: ConnectionState(System.currentTimeMillis())
+
+    /**
+     * This indicates that the app was online at [lastCheckInMillis] by doing a successful ping
+     */
+    object Online: ConnectionState(System.currentTimeMillis())
+
+    fun newState(connectivityManager: ConnectivityManager): ConnectionState {
+        val pair = Pair(this, NetUtil.isProbablyOnline(connectivityManager))
+
+        return when (pair) {
+            Pair(Offline, false),
+            Pair(ProbablyOnline, false),
+            Pair(Online, false) -> Offline
+
+            Pair(Offline, true),
+            Pair(ProbablyOnline, true) -> ProbablyOnline
+
+            Pair(Online, true) -> Online
+
+            else -> Offline
+        }
+    }
+
+    fun millisSinceLastCheck(): Long {
+        return System.currentTimeMillis() - lastCheckInMillis
+    }
 }

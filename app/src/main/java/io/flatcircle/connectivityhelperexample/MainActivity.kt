@@ -1,18 +1,22 @@
 package io.flatcircle.connectivityhelperexample
 
 import android.os.Bundle
+import android.util.Log
 import com.google.android.material.snackbar.Snackbar
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
 import io.flatcircle.connectivityhelper.ConnectionType
 import io.flatcircle.connectivityhelper.ConnectionMonitor
+import io.flatcircle.connectivityhelper.ConnectionState
+import io.flatcircle.connectivityhelper.StateChangeHandler
 
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.content_main.*
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), StateChangeHandler {
 
-    val netMonitor = ConnectionMonitor(applicationContext, ConnectionType.WiFi, ConnectionType.Cellular)
+    lateinit var netMonitor: ConnectionMonitor
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,7 +28,24 @@ class MainActivity : AppCompatActivity() {
                 .setAction("Action", null).show()
         }
 
+        netMonitor = ConnectionMonitor(applicationContext, this, ConnectionType.WiFi, ConnectionType.Cellular)
 
+        val isConnectedToWifi = netMonitor.isConnectedTo(ConnectionType.WiFi)
+        val isConnectedToCellular = netMonitor.isConnectedTo(ConnectionType.Cellular)
+        Log.i("MainActivity", "Connected to Wifi")
+    }
+
+    override fun stateChange(state: ConnectionState) {
+        Log.w("MainActivity", "newState = $state")
+        runOnUiThread {
+            textMain.setText("Connection state is $state")
+        }
+
+    }
+
+    override fun onDestroy() {
+        netMonitor.clear()
+        super.onDestroy()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

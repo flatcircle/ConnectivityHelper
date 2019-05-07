@@ -7,6 +7,8 @@ import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
+import androidx.annotation.WorkerThread
+import java.io.IOException
 
 /**
  * Created by jacquessmuts on 2019-05-02
@@ -14,6 +16,8 @@ import androidx.annotation.RequiresPermission
  */
 object NetUtil {
 
+
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     fun isProbablyOnline(context: Context?): Boolean {
         if (context == null)
             return false
@@ -22,6 +26,7 @@ object NetUtil {
         return isProbablyOnline(connectivityManager)
     }
 
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     fun isProbablyOnline(connectivityManager: ConnectivityManager): Boolean {
         val activeNetworkInfo = connectivityManager.activeNetworkInfo
         return (activeNetworkInfo != null) && activeNetworkInfo.isConnected
@@ -51,6 +56,28 @@ object NetUtil {
     private fun getWifiInfoInternal(context: Context): WifiInfo {
         val wifiMgr = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         return wifiMgr.connectionInfo
+    }
+
+
+    @WorkerThread
+    @Throws(InterruptedException::class, SecurityException::class)
+    @RequiresPermission(Manifest.permission.INTERNET)
+    fun ping(destination: String, timeoutInSeconds: Int = 5): Boolean {
+        try {
+            val command =
+                String.format("/system/bin/ping -c 3 -W %d %s", timeoutInSeconds, destination)
+            val process = Runtime.getRuntime().exec(command)
+            val ret = process.waitFor()
+            process.destroy()
+//            if (ret == 2) {
+//                throw SecurityException("This app does not have permission to access the internet. Set it in your manifest")
+//            }
+            return ret == 0
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+
+        return false
     }
 
 }

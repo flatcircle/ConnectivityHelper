@@ -18,6 +18,8 @@ class MainActivity : AppCompatActivity(), StateChangeHandler {
 
     lateinit var netMonitor: ConnectionMonitor
 
+    lateinit var blueToothMonitor: ConnectionMonitor
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -28,11 +30,24 @@ class MainActivity : AppCompatActivity(), StateChangeHandler {
                 .setAction("Action", null).show()
         }
 
-        netMonitor = ConnectionMonitor(applicationContext, this, ConnectionType.WiFi, ConnectionType.Cellular)
+        netMonitor = ConnectionMonitor.Builder(applicationContext) // any context will do
+            .watchedConnections(ConnectionType.Cellular, ConnectionType.WiFi) // list of connections that will be watched by the monitor
+            .stateChangeListener(this) // optional interface for handling connectivity state changes
+            .timeBetweenPings(10000) // milliseconds between each ping to check online status. Default 30000
+            .endpoint("8.8.8.8") // endpoint for pinging against. Default is Google, but that's unreliable in some countries.
+            .build()
 
-        val isConnectedToWifi = netMonitor.isConnectedTo(ConnectionType.WiFi)
-        val isConnectedToCellular = netMonitor.isConnectedTo(ConnectionType.Cellular)
+        val isConnectedToWifi = netMonitor.isConnectedTo(ConnectionType.WiFi) // Determines if the app is currently connected to the given network type
+        val isConnectedToCellular = netMonitor.isConnectedTo(ConnectionType.Cellular) // Determines if the app is currently connected to the given network type
         Log.i("MainActivity", "Connected to Wifi")
+
+        val connectionState = netMonitor.connectionState // Can be Offline, ProbablyOnline, or Online
+
+        when (connectionState) {
+            ConnectionState.Offline -> {} // The app is not connected to any network with internet capability
+            ConnectionState.ProbablyOnline -> {} // The app is connected to a network which claims to have internet
+            ConnectionState.Online -> {} // The app is able to successfully resolve a call to the endpoint, at least within the last [timeBetweenPings] milliseconds
+        }
     }
 
     override fun stateChange(state: ConnectionState) {

@@ -1,32 +1,44 @@
 package io.flatcircle.connectivityhelper
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.ConnectivityManager
+import androidx.annotation.RequiresPermission
 import java.lang.IllegalArgumentException
 
 /**
  * Created by jacquessmuts on 2019-05-03
  * This class must be instantiated as a singleton and .clear()'d upon activity/application destruction
  */
-class ConnectionMonitor(context: Context,
-                        var stateChangeHandler: StateChangeHandler?,
-                        vararg watchConnections: ConnectionType
+@SuppressLint("MissingPermission")
+class ConnectionMonitor
+private constructor(context: Context,
+                    val stateChangeHandler: StateChangeHandler?,
+                    val watchedConnections: List<ConnectionType>,
+                    endpoint: String
 ): ConnectivityEventObserver, PingResultHandler {
 
     companion object {
         const val TIME_BETWEEN_PINGS = 30000L // 30 seconds
+        const val GOOGLE_IP = "8.8.8.8" // This IP does not resolve in China
+        const val BAIDU_IP = "180.76.5"
     }
-
-    private val watchedConnections: List<ConnectionType> = watchConnections.toList()
 
     private val connectionMonitors: List<ConnectionStateMonitor> by lazy {
         watchedConnections.map { ConnectionStateMonitor(it) }
     }
-    private val pingLooper = PingLooper(connectionMonitors, this)
+    private val pingLooper = PingLooper(connectionMonitors, this, endpoint)
 
     override fun result(didReachEndpoint: Boolean) {
         if (didReachEndpoint) {
             connectionState = ConnectionState.Online
+        } else {
+            if (NetUtil.isProbablyOnline(connectivityManager)) {
+                connectionState = ConnectionState.ProbablyOnline
+            } else {
+                connectionState = ConnectionState.Offline
+            }
         }
     }
 
@@ -82,10 +94,42 @@ class ConnectionMonitor(context: Context,
     }
 
     fun clear() {
-        stateChangeHandler = null
         pingLooper.cancel()
         connectionMonitors.forEach { it.disable(connectivityManager) }
         connectivityManager.isActiveNetworkMetered
+    }
+
+
+    class Builder(private val context: Context) {
+        private var stateChangeHandler: StateChangeHandler? = null
+        private var watchedConnections: List<ConnectionType> = listOf()
+        private var timeBetweenPings: Long = TIME_BETWEEN_PINGS
+        private var endpoint: String = GOOGLE_IP
+
+        fun watchedConnections(vararg connections: ConnectionType): Builder {
+            this.watchedConnections = connections.toList()
+            return this
+        }
+
+        fun stateChangeListener(stateChangeHandler: StateChangeHandler): Builder {
+            this.stateChangeHandler = stateChangeHandler
+            return this
+        }
+
+        fun timeBetweenPings(milliseconds: Long): Builder {
+            this.timeBetweenPings = milliseconds
+            return this
+        }
+
+        fun endpoint(address: String): Builder {
+            this.endpoint = address
+            return this
+        }
+
+        @RequiresPermission(allOf = [Manifest.permission.INTERNET, Manifest.permission.ACCESS_NETWORK_STATE])
+        fun build(): ConnectionMonitor {
+            return ConnectionMonitor(context, stateChangeHandler, watchedConnections, endpoint)
+        }
     }
 
 }
@@ -96,6 +140,7 @@ interface StateChangeHandler {
 
 }
 
+@SuppressLint("MissingPermission")
 sealed class ConnectionState(var lastCheckInMillis: Long){
     object Offline: ConnectionState(System.currentTimeMillis())
 

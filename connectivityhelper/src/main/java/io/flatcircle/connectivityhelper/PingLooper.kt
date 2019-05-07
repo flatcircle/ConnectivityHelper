@@ -1,5 +1,6 @@
 package io.flatcircle.connectivityhelper
 
+import android.annotation.SuppressLint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -13,18 +14,20 @@ import kotlin.coroutines.CoroutineContext
  * Created by jacquessmuts on 2019-05-06
  * Internal class which pings repeatedly
  */
-internal class PingLooper(val connectionMonitors: List<ConnectionStateMonitor>, val pingResultHandler: PingResultHandler): CoroutineScope {
+internal class PingLooper(val connectionMonitors: List<ConnectionStateMonitor>,
+                          val pingResultHandler: PingResultHandler,
+                          val endpoint: String): CoroutineScope {
 
     private val job: Job by lazy { SupervisorJob() }
 
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.IO + job
 
-
     private var pingJob: Job? = null
     /**
      * This job loops infinitely by pinging endpoints until it gets interrupted
      */
+    @SuppressLint("MissingPermission")
     fun doPings() {
 
         launch {
@@ -33,14 +36,16 @@ internal class PingLooper(val connectionMonitors: List<ConnectionStateMonitor>, 
             pingJob = launch {
                 var isConnectedThisLoop = false
                 connectionMonitors.forEach { monitor ->
-                    val endpoint = monitor.connectionType.endPoint
-                    if (!isConnectedThisLoop && endpoint != null) {
-                        val isConnected = Pinger.ping(endpoint)
+                    if (!isConnectedThisLoop) {
+                        val isConnected = NetUtil.ping(endpoint)
                         if (isConnected) {
                             pingResultHandler.result(true)
                             isConnectedThisLoop = true
                         }
                     }
+                }
+                if (!isConnectedThisLoop) {
+                    pingResultHandler.result(false)
                 }
                 delay(ConnectionMonitor.TIME_BETWEEN_PINGS)
                 doPings()

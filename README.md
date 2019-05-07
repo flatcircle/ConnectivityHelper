@@ -28,10 +28,9 @@ This library also comes with a ConnectionMonitor, which can be used to get activ
 The ConnectionMonitor must be coupled with your Activity/Application's lifecycle like so:
 
 ```kotlin
-class MainActivity : AppCompatActivity(), StateChangeHandler {
+class MainActivity : AppCompatActivity(), StateChangeListener {
 
     lateinit var netMonitor: ConnectionMonitor
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,7 +55,7 @@ class MainActivity : AppCompatActivity(), StateChangeHandler {
     }
 
     override fun stateChange(state: ConnectionState) {
-        // function from StateChangeHandler, which receives all state changes
+        // function from StateChangeListener, which receives all state changes
     }
 
     override fun onDestroy() {

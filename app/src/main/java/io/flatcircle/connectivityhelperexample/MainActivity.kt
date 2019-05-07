@@ -9,16 +9,14 @@ import android.view.MenuItem
 import io.flatcircle.connectivityhelper.ConnectionType
 import io.flatcircle.connectivityhelper.ConnectionMonitor
 import io.flatcircle.connectivityhelper.ConnectionState
-import io.flatcircle.connectivityhelper.StateChangeHandler
+import io.flatcircle.connectivityhelper.StateChangeListener
 
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 
-class MainActivity : AppCompatActivity(), StateChangeHandler {
+class MainActivity : AppCompatActivity(), StateChangeListener {
 
     lateinit var netMonitor: ConnectionMonitor
-
-    lateinit var blueToothMonitor: ConnectionMonitor
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

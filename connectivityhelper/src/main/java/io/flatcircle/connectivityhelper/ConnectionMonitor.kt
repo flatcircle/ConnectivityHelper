@@ -14,7 +14,7 @@ import java.lang.IllegalArgumentException
 @SuppressLint("MissingPermission")
 class ConnectionMonitor
 private constructor(context: Context,
-                    val stateChangeHandler: StateChangeHandler?,
+                    val stateChangeListener: StateChangeListener?,
                     val watchedConnections: List<ConnectionType>,
                     endpoint: String
 ): ConnectivityEventObserver, PingResultHandler {
@@ -75,7 +75,7 @@ private constructor(context: Context,
                 pingLooper.cancel()
             }
             field = nuState
-            stateChangeHandler?.stateChange(field)
+            stateChangeListener?.stateChange(field)
         }
 
     init {
@@ -101,7 +101,7 @@ private constructor(context: Context,
 
 
     class Builder(private val context: Context) {
-        private var stateChangeHandler: StateChangeHandler? = null
+        private var stateChangeListener: StateChangeListener? = null
         private var watchedConnections: List<ConnectionType> = listOf()
         private var timeBetweenPings: Long = TIME_BETWEEN_PINGS
         private var endpoint: String = GOOGLE_IP
@@ -111,8 +111,8 @@ private constructor(context: Context,
             return this
         }
 
-        fun stateChangeListener(stateChangeHandler: StateChangeHandler): Builder {
-            this.stateChangeHandler = stateChangeHandler
+        fun stateChangeListener(stateChangeListener: StateChangeListener): Builder {
+            this.stateChangeListener = stateChangeListener
             return this
         }
 
@@ -128,13 +128,13 @@ private constructor(context: Context,
 
         @RequiresPermission(allOf = [Manifest.permission.INTERNET, Manifest.permission.ACCESS_NETWORK_STATE])
         fun build(): ConnectionMonitor {
-            return ConnectionMonitor(context, stateChangeHandler, watchedConnections, endpoint)
+            return ConnectionMonitor(context, stateChangeListener, watchedConnections, endpoint)
         }
     }
 
 }
 
-interface StateChangeHandler {
+interface StateChangeListener {
 
     fun stateChange(state: ConnectionState)
 

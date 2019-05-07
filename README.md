@@ -35,6 +35,7 @@ class MainActivity : AppCompatActivity(), StateChangeHandler {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         netMonitor = ConnectionMonitor.Builder(applicationContext) // any context will do
                     .watchedConnections(ConnectionType.Cellular, ConnectionType.WiFi) // list of connections that will be watched by the monitor
                     .stateChangeListener(this) // optional interface for handling connectivity state changes
@@ -42,21 +43,24 @@ class MainActivity : AppCompatActivity(), StateChangeHandler {
                     .endpoint("8.8.8.8") // endpoint for pinging against. Default is Google, but that's unreliable in some countries.
                     .build()
 
-
         val isConnectedToWifi = netMonitor.isConnectedTo(ConnectionType.WiFi) // Determines if the app is currently connected to the given network type
         val isConnectedToCellular = netMonitor.isConnectedTo(ConnectionType.Cellular) // Determines if the app is currently connected to the given network type
 
         val connectionState = netMonitor.connectionState // the current connectionState, which can be Offline, ProbablyOnline, or Online
 
+        when (connectionState) {
+            ConnectionState.Offline -> {} // The app is not connected to any network with internet capability
+            ConnectionState.ProbablyOnline -> {} // The app is connected to a network which claims to have internet
+            ConnectionState.Online -> {} // The app is able to successfully resolve a call to the endpoint, at least within the last [timeBetweenPings] milliseconds
+        }
     }
-
 
     override fun stateChange(state: ConnectionState) {
         // function from StateChangeHandler, which receives all state changes
     }
 
     override fun onDestroy() {
-        netMonitor.clear()
+        netMonitor.clear() // netMonitor must be cleared for garbage collection
         super.onDestroy()
     }
 ```

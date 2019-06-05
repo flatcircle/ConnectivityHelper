@@ -71,9 +71,6 @@ object NetUtil {
             val process = Runtime.getRuntime().exec(command)
             val ret = process.waitFor()
             process.destroy()
-//            if (ret == 2) {
-//                throw SecurityException("This app does not have permission to access the internet. Set it in your manifest")
-//            }
             return ret == 0
         } catch (e: IOException) {
             e.printStackTrace()

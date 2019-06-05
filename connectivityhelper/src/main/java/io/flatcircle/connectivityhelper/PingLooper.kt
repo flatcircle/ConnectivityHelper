@@ -35,7 +35,7 @@ internal class PingLooper(val connectionMonitors: List<ConnectionStateMonitor>,
 
             pingJob = launch {
                 var isConnectedThisLoop = false
-                connectionMonitors.forEach { monitor ->
+                connectionMonitors.forEach {
                     if (!isConnectedThisLoop) {
                         val isConnected = NetUtil.ping(endpoint)
                         if (isConnected) {

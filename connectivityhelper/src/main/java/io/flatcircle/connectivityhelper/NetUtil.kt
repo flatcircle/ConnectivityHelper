@@ -58,7 +58,9 @@ object NetUtil {
         return wifiMgr.connectionInfo
     }
 
-
+    /**
+     * This seems to work but I've been adviced that it does not always work. Be careful.
+     */
     @WorkerThread
     @Throws(InterruptedException::class, SecurityException::class)
     @RequiresPermission(Manifest.permission.INTERNET)

@@ -1,8 +1,10 @@
 package io.flatcircle.connectivityhelper
 
+import android.Manifest
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkRequest
+import androidx.annotation.RequiresPermission
 
 /**
  * Created by jacquessmuts on 2019-05-03
@@ -17,6 +19,7 @@ internal class ConnectionStateMonitor(val connectionType: ConnectionType) : Conn
             .Builder()
             .addTransportType(connectionType.networkCapablity).build()
 
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     fun enable(connectivityManager: ConnectivityManager, connectivityEventObserver: ConnectivityEventObserver) {
         connectionObserver = connectivityEventObserver
         connectivityManager.registerNetworkCallback(networkRequest, this)

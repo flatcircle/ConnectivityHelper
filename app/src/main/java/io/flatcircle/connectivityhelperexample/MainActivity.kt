@@ -48,7 +48,7 @@ class MainActivity : AppCompatActivity(), StateChangeListener {
         }
     }
 
-    override fun stateChange(state: ConnectionState) {
+    override fun netStateChange(state: ConnectionState) {
         Log.w("MainActivity", "newState = $state")
         runOnUiThread {
             textMain.setText("Connection state is $state")

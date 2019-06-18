@@ -14,7 +14,7 @@ import java.lang.IllegalArgumentException
 @SuppressLint("MissingPermission")
 class ConnectionMonitor
 private constructor(context: Context,
-                    val stateChangeListener: StateChangeListener?,
+                    var stateChangeListener: StateChangeListener?,
                     val watchedConnections: List<ConnectionType>,
                     endpoint: String
 ): ConnectivityEventObserver, PingResultHandler {
@@ -75,7 +75,7 @@ private constructor(context: Context,
                 pingLooper.cancel()
             }
             field = nuState
-            stateChangeListener?.stateChange(field)
+            stateChangeListener?.netStateChange(field)
         }
 
     init {
@@ -94,6 +94,7 @@ private constructor(context: Context,
     }
 
     fun clear() {
+        stateChangeListener = null
         pingLooper.cancel()
         connectionMonitors.forEach { it.disable(connectivityManager) }
         connectivityManager.isActiveNetworkMetered
@@ -135,9 +136,7 @@ private constructor(context: Context,
 }
 
 interface StateChangeListener {
-
-    fun stateChange(state: ConnectionState)
-
+    fun netStateChange(state: ConnectionState)
 }
 
 @SuppressLint("MissingPermission")

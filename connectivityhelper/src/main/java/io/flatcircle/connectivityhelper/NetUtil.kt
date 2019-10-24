@@ -46,7 +46,7 @@ object NetUtil {
      * On Android 27 (8.0) and onwards, you won't get ssid/bssid info unless you have
      * ACCESS_COARSE_LOCATION permission
      */
-    fun getWifiInfoPartial(context: Context?): WifiInfo? {
+    private fun getWifiInfoPartial(context: Context?): WifiInfo? {
         if (context == null)
             return null
 
@@ -77,6 +77,93 @@ object NetUtil {
         }
 
         return false
+    }
+
+
+    /**
+     * Indicate if the wifi network is connected at all.
+     *
+     * @param context A context to use.
+     * @return True if connected, false otherwise.
+     */
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+    fun isWifiConnected(context: Context?): Boolean {
+        val connManager = context!!.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val networks = connManager.allNetworks
+        if (networks != null && networks.isNotEmpty()) {
+            repeat(networks
+                .map { connManager.getNetworkInfo(it) }
+                .filter { it != null && it.type == ConnectivityManager.TYPE_WIFI && it.isConnected }.size
+            ) { return true }
+        }
+
+        return false
+    }
+
+    /**
+     * Returns the active WifiInfo.
+     *
+     * @return The active WifiInfo or null if not connected to a WiFi network or if context is null
+     */
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+    fun getActiveWifiInfo(context: Context?): WifiInfo? {
+        if (context == null)
+            return null
+
+        // Check if a network is connected at all.
+        if (!isWifiConnected(context)) {
+            return null
+        }
+
+        // Get the SSID from the Wi-Fi manager service.
+        return (context.applicationContext
+            .getSystemService(Context.WIFI_SERVICE) as WifiManager)
+            .connectionInfo
+    }
+
+
+    /**
+     * Returns the active WiFi SSID.
+     *
+     * @return The active WiFi SSID or null not connected to a WiFi network.
+     */
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+    fun getActiveWifiSSID(context: Context?): String? {
+        val wifiInfo = getActiveWifiInfo(context)
+        if (wifiInfo != null) {
+            val ssid = wifiInfo.ssid
+            if (ssid != null) {
+                return if (ssid.length > 2 &&
+                    ssid[0] == '"' &&
+                    ssid[ssid.length - 1] == '"') {
+                    // Strip encapsulating quotes.
+                    ssid.substring(1, ssid.length - 1)
+                } else {
+                    ssid
+                }
+            }
+        }
+
+        return null
+    }
+
+
+    /**
+     * Returns the active WiFi BSSID.
+     *
+     * @return The active WiFi BSSID or null not connected to a WiFi network.
+     */
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+    fun getActiveWifiBSSID(context: Context?): String? {
+        val wifiInfo = getActiveWifiInfo(context)
+        if (wifiInfo != null) {
+            val bssid = wifiInfo.bssid
+            if (bssid != null) {
+                return bssid
+            }
+        }
+
+        return null
     }
 
 }

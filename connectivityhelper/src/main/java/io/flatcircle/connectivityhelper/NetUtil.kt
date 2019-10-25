@@ -46,7 +46,7 @@ object NetUtil {
      * On Android 27 (8.0) and onwards, you won't get ssid/bssid info unless you have
      * ACCESS_COARSE_LOCATION permission
      */
-    private fun getWifiInfoPartial(context: Context?): WifiInfo? {
+    fun getWifiInfoPartial(context: Context?): WifiInfo? {
         if (context == null)
             return null
 
